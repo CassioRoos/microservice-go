@@ -3,6 +3,7 @@ package handlers
 import (
 	"MicroseService/data"
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -85,8 +86,15 @@ func (c Cars) MiddlewareValidateCar(next http.Handler) http.Handler {
 		car := data.Car{}
 
 		if err := car.FromJSON(r.Body); err != nil {
-			c.l.Println("Error deserializing Car", err)
+			c.l.Println("[ERROR] deserializing Car", err)
 			http.Error(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		//Validate the product content before moving forward
+		if err := car.Validate(); err != nil {
+			c.l.Println("[ERROR] validating Car", err)
+			http.Error(rw, fmt.Sprintf("Error reading the car: %s", err), http.StatusBadRequest)
 			return
 		}
 		// add the car to the context

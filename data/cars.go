@@ -4,17 +4,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"regexp"
 	"time"
+
+	"github.com/go-playground/validator"
 )
 
 type (
 	Car struct {
 		ID           int     `json:"id"`
 		Color        string  `json:"color"`
-		Name         string  `json:"name"`
+		Name         string  `json:"name" validate:"required"`
 		Description  string  `json:"description"`
-		Price        float32 `json:"price"`
-		LicensePlate string  `json:"license_plate"`
+		Price        float32 `json:"price" validate:"gt=0"`
+		LicensePlate string  `json:"license_plate" validate:"required,lcplt"`
 		CreatedOn    string  `json:"-"`
 		UpdatedOn    string  `json:"-"`
 		DeletedOn    string  `json:"-"`
@@ -39,6 +42,26 @@ func (c *Cars) ToJSON(w io.Writer) error {
 	e := json.NewEncoder(w)
 	// now we have to encode ourselfs, because C is pointing to the slice of cars
 	return e.Encode(c)
+}
+
+func (c *Car) Validate() error {
+	v := validator.New()
+	// adding a custom validation
+	v.RegisterValidation("lcplt", validateLicensePlate)
+
+	return v.Struct(c)
+}
+
+func validateLicensePlate(fl validator.FieldLevel) bool {
+	// here em Brasil the license plate should be something like ABC-1234
+	// regex will ensure the this is respected
+	rgx := regexp.MustCompile(`[A-Z]{3}-[0-9]{4}`)
+	matches := rgx.FindAllString(fl.Field().String(), -1)
+	// if there is more than one or no one should raise error
+	if len(matches) != 1 {
+		return false
+	}
+	return true
 }
 
 func GetCars() Cars {
