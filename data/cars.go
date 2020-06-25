@@ -2,6 +2,7 @@ package data
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"time"
 )
@@ -28,9 +29,13 @@ func (c *Car) FromJSON(r io.Reader) error {
 	return d.Decode(c)
 }
 
-// This works like a object method
+// ToJSON serializes the contents of the collection to JSON
+// NewEncoder provides better performance than json.Unmarshal as it does not
+// have to buffer the output into an in memory slice of bytes
+// this reduces allocations and the overheads of the service
+//
+// https://golang.org/pkg/encoding/json/#NewEncoder
 func (c *Cars) ToJSON(w io.Writer) error {
-	// User the encoder because is faster to marshal json | Marshal uses in memory stream to perform
 	e := json.NewEncoder(w)
 	// now we have to encode ourselfs, because C is pointing to the slice of cars
 	return e.Encode(c)
@@ -69,4 +74,26 @@ func AddCar(c *Car) {
 func getNext() int {
 	c := carList[len(carList)-1]
 	return c.ID + 1
+}
+
+var ErrCarNotFound = fmt.Errorf("Car not found")
+
+func findCar(id int) (*Car, int, error) {
+	for i, c := range carList {
+		if c.ID == id {
+			return c, i, nil
+		}
+	}
+	return nil, -1, ErrCarNotFound
+}
+
+func UpdateCar(id int, c *Car) error {
+	_, pos, err := findCar(id)
+	if err != nil {
+		return err
+	}
+
+	c.ID = id
+	carList[pos] = c
+	return nil
 }
