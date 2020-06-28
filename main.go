@@ -14,6 +14,7 @@ import (
 	"github.com/nicholasjackson/env"
 
 	"github.com/gorilla/mux"
+	gorilaHandlers "github.com/gorilla/handlers"
 )
 
 //A nice way to get the env variable, in this case, it will not raise an error when the value is not set, it will use default value instead
@@ -54,10 +55,11 @@ func main() {
 	getRouter.Handle("/swagger.yaml", http.FileServer(http.Dir("./")))
 
 	// sm.Handle("/", car)
-
+	// we could allow a specific host like http://localhost:3000
+	ch := gorilaHandlers.CORS(gorilaHandlers.AllowedOrigins([]string{"*"}))
 	server := &http.Server{
 		Addr:         *bindAddress,
-		Handler:      sm,
+		Handler:      ch(sm),
 		ErrorLog:     log,
 		WriteTimeout: 5 * time.Second,
 		ReadTimeout:  10 * time.Second,
