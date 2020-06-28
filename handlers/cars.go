@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"MicroseService/data"
-	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,97 +10,52 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type (
-	Cars struct {
-		l *log.Logger
-	}
-
-	KeyCar struct{}
-)
-
-func NewCars(l *log.Logger) *Cars {
-	return &Cars{l}
+type Cars struct {
+	l *log.Logger
+	v *data.Validation
 }
 
-// func (c *Cars) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-// 	c.l.Println(r.Method)
-// 	if r.Method == http.MethodGet {
-// 		c.GetCars(rw, r)
-// 		return
-// 	}
-// 	if r.Method == http.MethodPost {
-// 		c.PostCar(rw, r)
-// 		return
-// 	}
-// 	rw.WriteHeader(http.StatusMethodNotAllowed)
-// }
+type KeyCar struct{}
 
-func (c *Cars) GetCars(rw http.ResponseWriter, r *http.Request) {
-	c.l.Println("Handle GET Cars")
-	// Return the type CARS
-	lc := data.GetCars()
-	// FROM the type we can call the method to JSON, this way we can optimise our code
-	if err := lc.ToJSON(rw); err != nil {
-		http.Error(rw, "Unable to marshal JSON", http.StatusInternalServerError)
-		return
-	}
-	// it's not necessary to call write, cuz we are already writing
-	// rw.Write(data)
+// A list of cars returns in the response
+// swagger:response carsResponse
+type carsResponse struct {
+	// All cars in the system
+	// in: body
+	Body []data.Car
 }
 
-func (c *Cars) PostCar(rw http.ResponseWriter, r *http.Request) {
-	c.l.Println("Handle POST ")
-
-	car := r.Context().Value(KeyCar{}).(data.Car)
-	data.AddCar(&car)
-	c.l.Printf("Car %#v", car)
+func NewCars(l *log.Logger, v *data.Validation) *Cars {
+	return &Cars{l, v}
 }
 
-func (c *Cars) UpdateCar(rw http.ResponseWriter, r *http.Request) {
-	// the ID is stored inside the mux
+// ErrInvalidCarPath is an error message when the car path is not valid
+var ErrInvalidCarPath = fmt.Errorf("Invalid Path, path should be /cars/[id]")
+
+// GenericError is a generic error message returned by a server
+type GenericError struct {
+	Code    int    `json:"code,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
+// ValidationError is a collection of validation error messages
+type ValidationError struct {
+	Messages []string `json:"messages"`
+}
+
+// getCarId returns the car id from the URL
+// Panic if cannot convert the id into an integer
+// this should never happen as the router ensures that
+// this is a valid number
+func getCarId(r *http.Request) int {
+	//parse the car id from the url
 	vars := mux.Vars(r)
-	// Get the param by name
+
+	//convert the id into an integer and return
 	id, err := strconv.Atoi(vars["id"])
-
 	if err != nil {
-		http.Error(rw, "Unable to convert the ID", http.StatusBadRequest)
-		return
+		// should never happen
+		panic(err)
 	}
-	c.l.Println("Handle PUT Car", id)
-	car := r.Context().Value(KeyCar{}).(data.Car)
-	err = data.UpdateCar(id, &car)
-	if err == data.ErrCarNotFound {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func (c Cars) MiddlewareValidateCar(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		car := data.Car{}
-
-		if err := car.FromJSON(r.Body); err != nil {
-			c.l.Println("[ERROR] deserializing Car", err)
-			http.Error(rw, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		//Validate the product content before moving forward
-		if err := car.Validate(); err != nil {
-			c.l.Println("[ERROR] validating Car", err)
-			http.Error(rw, fmt.Sprintf("Error reading the car: %s", err), http.StatusBadRequest)
-			return
-		}
-		// add the car to the context
-		ctx := context.WithValue(r.Context(), KeyCar{}, car)
-		r = r.WithContext(ctx)
-		// Call the next handler, which can be another middleware in the chain, or the final handler.
-		next.ServeHTTP(rw, r)
-
-	})
+	return id
 }

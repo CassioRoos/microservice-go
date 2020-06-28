@@ -1,0 +1,165 @@
+basePath: /
+consumes:
+- application/json
+definitions:
+  Car:
+    description: Car defines the structure for an API car
+    properties:
+      color:
+        description: the color of the car
+        type: string
+        x-go-name: Color
+      description:
+        description: the description for this car
+        maxLength: 255
+        type: string
+        x-go-name: Description
+      id:
+        description: the id for the car
+        format: int64
+        minimum: 1
+        type: integer
+        x-go-name: ID
+      license_plate:
+        description: the license plate for this car
+        pattern: '[A-Z]{3}-[0-9]{4}'
+        type: string
+        x-go-name: LicensePlate
+      name:
+        description: the name of the car
+        maxLength: 255
+        type: string
+        x-go-name: Name
+      price:
+        description: the price for the car
+        format: float
+        minimum: 0.01
+        type: number
+        x-go-name: Price
+    required:
+    - name
+    - price
+    - license_plate
+    type: object
+    x-go-package: MicroseService/data
+  Cars:
+    description: Car defines the structure for an API car
+    items:
+      $ref: '#/definitions/Car'
+    type: array
+    x-go-package: MicroseService/data
+  GenericError:
+    description: GenericError is a generic error message returned by a server
+    properties:
+      code:
+        format: int64
+        type: integer
+        x-go-name: Code
+      message:
+        type: string
+        x-go-name: Message
+    type: object
+    x-go-package: MicroseService/handlers
+  ValidationError:
+    description: ValidationError is a collection of validation error messages
+    properties:
+      messages:
+        items:
+          type: string
+        type: array
+        x-go-name: Messages
+    type: object
+    x-go-package: MicroseService/handlers
+info:
+  description: Documentation for Cars API
+  title: of cars
+  version: 1.0.0
+paths:
+  /car/{id}:
+    delete:
+      description: Delete a car by the given Id
+      operationId: deleteCar
+      responses:
+        "201":
+          $ref: '#/responses/noContentResponse'
+        "404":
+          $ref: '#/responses/errorResponse'
+        "501":
+          $ref: '#/responses/errorResponse'
+      tags:
+      - cars
+  /cars:
+    get:
+      description: Returns a list of cars
+      operationId: listCars
+      responses:
+        "200":
+          $ref: '#/responses/carsResponse'
+      tags:
+      - cars
+    post:
+      description: Create a new car
+      operationId: createCars
+      responses:
+        "201":
+          $ref: '#/responses/carResponse'
+        "422":
+          $ref: '#/responses/errorValidation'
+        "501":
+          $ref: '#/responses/errorResponse'
+      tags:
+      - cars
+    put:
+      description: update the car details
+      operationId: updateCar
+      parameters:
+      - description: |-
+          Car data structure to Update or Create.
+          Note: the Id field is ignored by both Create and Update operations
+        in: body
+        name: Body
+        required: true
+        schema:
+          $ref: '#/definitions/Car'
+      - description: the Id of the car for which the operation relates
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+        x-go-name: Id
+      responses:
+        "200":
+          $ref: '#/responses/noContentResponse'
+        "404":
+          $ref: '#/responses/errorResponse'
+        "422":
+          $ref: '#/responses/errorValidation'
+      tags:
+      - cars
+produces:
+- application/json
+responses:
+  carResponse:
+    description: Data structure representing a single car
+    schema:
+      $ref: '#/definitions/Car'
+  carsResponse:
+    description: A list of cars
+    schema:
+      items:
+        $ref: '#/definitions/Car'
+      type: array
+  errorResponse:
+    description: Generic error message returned as a string
+    schema:
+      $ref: '#/definitions/GenericError'
+  errorValidation:
+    description: Validation errors defines as an array os strings
+    schema:
+      $ref: '#/definitions/ValidationError'
+  noContentResponse:
+    description: When there is no return
+schemes:
+- http
+swagger: "2.0"

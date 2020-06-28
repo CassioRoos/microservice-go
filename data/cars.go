@@ -1,71 +1,104 @@
 package data
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"regexp"
-	"time"
-
-	"github.com/go-playground/validator"
 )
 
+// Is an error raised when a car is not found
+var ErrCarNotFound = fmt.Errorf("Car not found")
+
+ // Car defines the structure for an API car
+ // swagger:model
 type (
 	Car struct {
+		// the id for the car
+		//
+		// required: false
+		// min: 1
 		ID           int     `json:"id"`
+
+		// the color of the car
+		//
+		// required: false
 		Color        string  `json:"color"`
+		// the name of the car
+		//
+		// required: true
+		// max length: 255
 		Name         string  `json:"name" validate:"required"`
+		// the description for this car
+		//
+		// required: false
+		// max length: 255
 		Description  string  `json:"description"`
-		Price        float32 `json:"price" validate:"gt=0"`
+
+		// the price for the car
+		//
+		// required: true
+		// min: 0.01
+		Price        float32 `json:"price" validate:"required,gt=0"`
+
+		// the license plate for this car
+		//
+		// required: true
+		// pattern: [A-Z]{3}-[0-9]{4}
 		LicensePlate string  `json:"license_plate" validate:"required,lcplt"`
-		CreatedOn    string  `json:"-"`
-		UpdatedOn    string  `json:"-"`
-		DeletedOn    string  `json:"-"`
 	}
 	// This type is to help structure the code, make some changes more independent
 	Cars []*Car
 )
 
-func (c *Car) FromJSON(r io.Reader) error {
-	// the opposite of encode
-	d := json.NewDecoder(r)
-	return d.Decode(c)
-}
-
-// ToJSON serializes the contents of the collection to JSON
-// NewEncoder provides better performance than json.Unmarshal as it does not
-// have to buffer the output into an in memory slice of bytes
-// this reduces allocations and the overheads of the service
-//
-// https://golang.org/pkg/encoding/json/#NewEncoder
-func (c *Cars) ToJSON(w io.Writer) error {
-	e := json.NewEncoder(w)
-	// now we have to encode ourselfs, because C is pointing to the slice of cars
-	return e.Encode(c)
-}
-
-func (c *Car) Validate() error {
-	v := validator.New()
-	// adding a custom validation
-	v.RegisterValidation("lcplt", validateLicensePlate)
-
-	return v.Struct(c)
-}
-
-func validateLicensePlate(fl validator.FieldLevel) bool {
-	// here em Brasil the license plate should be something like ABC-1234
-	// regex will ensure the this is respected
-	rgx := regexp.MustCompile(`[A-Z]{3}-[0-9]{4}`)
-	matches := rgx.FindAllString(fl.Field().String(), -1)
-	// if there is more than one or no one should raise error
-	if len(matches) != 1 {
-		return false
-	}
-	return true
-}
-
+// return all the cars in the DB
 func GetCars() Cars {
 	return carList
+}
+// return a specific car by the given ID
+func GetCarById(id int) (*Car, error) {
+	i := FindIndexyCarId(id)
+	if id == -1 {
+		return nil, ErrCarNotFound
+	}
+	return carList[i], nil
+}
+
+// Finds the index of a car in the Database
+// returns -1 when no car can be found
+func FindIndexyCarId(id int) int {
+	for i, c := range GetCars() {
+		if c.ID == id {
+			return i
+		}
+	}
+	return -1
+}
+
+// DeleteCar deletes a car from database
+func DeleteCar(id int) error {
+	i := FindIndexyCarId(id)
+	if i == -1 {
+		return ErrCarNotFound
+	}
+	carList = append(carList[:i], carList[i+1:]...)
+	return nil
+}
+
+// AddCar adds a new car to DB
+func AddCar(c *Car) {
+	c.ID = carList[len(carList)-1].ID+1
+	carList = append(carList, c)
+}
+
+// Update a car by the given ID.
+// If a car does not exist by the given id an error is returned
+// CarNotFound error
+func UpdateCar(c Car) error {
+	pos := FindIndexyCarId(c.ID)
+	if pos == -1 {
+		return ErrCarNotFound
+	}
+	// update the car in the DB
+	carList[pos] = &c
+	return nil
 }
 
 var carList = []*Car{
@@ -74,49 +107,40 @@ var carList = []*Car{
 		Color:        "Blue",
 		Description:  "A family car",
 		Price:        12461.85,
-		LicensePlate: "IVP5464",
-		CreatedOn:    time.Now().UTC().String(),
-		UpdatedOn:    time.Now().UTC().String(),
+		LicensePlate: "IVP-5464",
 	},
 	&Car{ID: 2,
 		Name:         "Celta",
 		Color:        "Red",
 		Description:  "Economic car",
 		Price:        837.37,
-		LicensePlate: "X897H97",
-		CreatedOn:    time.Now().UTC().String(),
-		UpdatedOn:    time.Now().UTC().String(),
+		LicensePlate: "ABC-4321",
 	},
 }
 
-func AddCar(c *Car) {
-	c.ID = getNext()
-	carList = append(carList, c)
-}
 
-func getNext() int {
-	c := carList[len(carList)-1]
-	return c.ID + 1
-}
 
-var ErrCarNotFound = fmt.Errorf("Car not found")
+// ***** **** *** ** * Note * ** *** **** *****
+// ***** **** *** ** * Note * ** *** **** *****
+//
+// To implement swagger look into the links
+//
+//
+//Contents:
+//Swagger Go Code Generator:
+//https://github.com/go-swagger/go-swagger
+//
+//Swagger:
+//https://swagger.io/
+//
+//ReDoc:
+//https://github.com/Redocly/redoc
+//
+//Middleware for hosting redoc sites from your API:
+//https://github.com/go-openapi/runtime/tree/master/middleware
+//
+//
 
-func findCar(id int) (*Car, int, error) {
-	for i, c := range carList {
-		if c.ID == id {
-			return c, i, nil
-		}
-	}
-	return nil, -1, ErrCarNotFound
-}
-
-func UpdateCar(id int, c *Car) error {
-	_, pos, err := findCar(id)
-	if err != nil {
-		return err
-	}
-
-	c.ID = id
-	carList[pos] = c
-	return nil
-}
+// ***** **** *** ** * Note * ** *** **** *****
+// ***** **** *** ** * Note * ** *** **** *****
+// ***** **** *** ** * Note * ** *** **** *****

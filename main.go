@@ -1,6 +1,7 @@
 package main
 
 import (
+	"MicroseService/data"
 	"MicroseService/handlers"
 	"context"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/go-openapi/runtime/middleware"
 	"github.com/nicholasjackson/env"
 
 	"github.com/gorilla/mux"
@@ -20,24 +22,36 @@ var bindAddress = env.String("BIND_ADDRESS", false, ":8888", "Bind address for t
 func main() {
 	env.Parse()
 	log := log.New(os.Stdout, "cassio.roos-api++>", log.LstdFlags)
-	car := handlers.NewCars(log)
+	validator := data.NewValidation()
+	car := handlers.NewCars(log, validator)
 	//Create a new serve mux and register the handler
 	sm := mux.NewRouter()
 
 	// SubRouter is a Handler of handler for GETs
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
-	getRouter.HandleFunc("/", car.GetCars)
+	getRouter.HandleFunc("/cars", car.GetListCars)
+	getRouter.HandleFunc("/cars/{id:[0-9]+}", car.GetCarById)
 
 	// SubRouter is a Handler of handler for PUTs
 	putRouter := sm.Methods(http.MethodPut).Subrouter()
 	// Regex will be validated and the id value will be available in the service side
-	putRouter.HandleFunc("/{id:[0-9]+}", car.UpdateCar)
+	putRouter.HandleFunc("/cars", car.UpdateCar)
 	putRouter.Use(car.MiddlewareValidateCar)
 
 	// SubRouter is a Handler of handler for POSTs
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
-	postRouter.HandleFunc("/", car.PostCar)
+	postRouter.HandleFunc("/cars", car.PostCar)
 	postRouter.Use(car.MiddlewareValidateCar)
+
+	deleteRouter := sm.Methods(http.MethodDelete).Subrouter()
+	deleteRouter.HandleFunc("/cars/{id:[0-9]+}", car.DeleteCar)
+
+	ops := middleware.RedocOpts{SpecURL: "/swagger.yaml"}
+	sh := middleware.Redoc(ops, nil)
+	// Route to acces swager
+	getRouter.Handle("/docs", sh)
+	// Route to serve the yaml file to open-api
+	getRouter.Handle("/swagger.yaml", http.FileServer(http.Dir("./")))
 
 	// sm.Handle("/", car)
 
