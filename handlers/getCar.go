@@ -1,7 +1,9 @@
 package handlers
 
 import (
-	"MicroseService/data"
+	"context"
+	"github.com/CassioRoos/MicroseService/data"
+	"github.com/CassioRoos/grpc_currency/protos/currency"
 	"net/http"
 )
 
@@ -49,6 +51,20 @@ func (c *Cars) GetCarById(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rw.Header().Set("Content-Type", "application/json")
+
+	rr := &currency.RateRequest{
+		Base:        currency.Currencies(currency.Currencies_value["BRL"]),
+		Destination: currency.Currencies(currency.Currencies_value["USD"]),
+	}
+	rate, err := c.cc.GetRate(context.Background(), rr)
+	if err != nil{
+		c.l.Println("Error getting rate from GRPC", err)
+		data.ToJSON(&GenericError{http.StatusInternalServerError, err.Error()}, rw)
+		return
+	}
+	c.l.Println("With GRPC","OldValue", car.Price, "Rate", rate.Rate)
+	car.Price *= rate.Rate
+	c.l.Println("With GRPC","NewValue", car.Price, "Rate", rate.Rate)
 	err = data.ToJSON(car, rw)
 	if err != nil {
 		// should never happen, but will log it - Defense coding

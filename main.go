@@ -1,9 +1,10 @@
 package main
 
 import (
-	"MicroseService/data"
-	"MicroseService/handlers"
 	"context"
+	"github.com/CassioRoos/MicroseService/data"
+	"github.com/CassioRoos/MicroseService/handlers"
+	"google.golang.org/grpc"
 	"log"
 	"net/http"
 	"os"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/gorilla/mux"
 	gorilaHandlers "github.com/gorilla/handlers"
+	protos "github.com/CassioRoos/grpc_currency/protos/currency"
 )
 
 //A nice way to get the env variable, in this case, it will not raise an error when the value is not set, it will use default value instead
@@ -22,11 +24,21 @@ var bindAddress = env.String("BIND_ADDRESS", false, ":8888", "Bind address for t
 
 func main() {
 	env.Parse()
+	// THIS SHOULD NOT GO OUT IN PRODUCTION
+	// FOR TESTING PURPOSES  ONLY
+	conn, err := grpc.Dial("localhost:9098", grpc.WithInsecure())
+	if err != nil{
+		panic(err)
+	}
+	cc := protos.NewCurrencyClient(conn)
+
 	log := log.New(os.Stdout, "cassio.roos-api++>", log.LstdFlags)
 	validator := data.NewValidation()
-	car := handlers.NewCars(log, validator)
+	car := handlers.NewCars(log, validator, cc)
 	//Create a new serve mux and register the handler
 	sm := mux.NewRouter()
+
+
 
 	// SubRouter is a Handler of handler for GETs
 	getRouter := sm.Methods(http.MethodGet).Subrouter()

@@ -1,8 +1,9 @@
 package handlers
 
 import (
-	"MicroseService/data"
 	"fmt"
+	"github.com/CassioRoos/MicroseService/data"
+	"github.com/CassioRoos/grpc_currency/protos/currency"
 	"log"
 	"net/http"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 type Cars struct {
 	l *log.Logger
 	v *data.Validation
+	cc currency.CurrencyClient
 }
 
 type KeyCar struct{}
@@ -25,8 +27,8 @@ type carsResponse struct {
 	Body []data.Car
 }
 
-func NewCars(l *log.Logger, v *data.Validation) *Cars {
-	return &Cars{l, v}
+func NewCars(l *log.Logger, v *data.Validation, cc currency.CurrencyClient) *Cars {
+	return &Cars{l, v, cc}
 }
 
 // ErrInvalidCarPath is an error message when the car path is not valid

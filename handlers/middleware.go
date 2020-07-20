@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"MicroseService/data"
 	"context"
 	"fmt"
+	"github.com/CassioRoos/MicroseService/data"
 	"net/http"
 )
 

@@ -15,7 +15,7 @@
 package handlers
 
 import (
-	"MicroseService/data"
+	"github.com/CassioRoos/MicroseService/data"
 )
 
 // NOTE: types defined here are purely for documentation purposes

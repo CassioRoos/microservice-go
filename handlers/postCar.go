@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"MicroseService/data"
+	"github.com/CassioRoos/MicroseService/data"
 	"net/http"
 )
 
