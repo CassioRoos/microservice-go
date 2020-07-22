@@ -15,21 +15,21 @@ import (
 func (c *Cars) DeleteCar(rw http.ResponseWriter, r *http.Request) {
 	id := getCarId(r)
 
-	c.l.Println("Handle DELETE id: ", id)
-	err := data.DeleteCar(id)
+	c.l.Debug("Handle DELETE id: ", id)
+	err := c.cr.DeleteCar(id)
 
 	switch err {
 	case nil:
 		rw.WriteHeader(http.StatusNoContent)
 	case data.ErrCarNotFound:
 		{
-			c.l.Println("[ERROR] id not found")
+			c.l.Error("[ERROR] id not found")
 			rw.WriteHeader(http.StatusNotFound)
 			data.ToJSON(&GenericError{http.StatusNotFound, err.Error()}, rw)
 			return
 		}
 	default:
-		c.l.Println("[ERROR] Error deleting record", err)
+		c.l.Error("[ERROR] Error deleting record", err)
 		rw.WriteHeader(http.StatusInternalServerError)
 		data.ToJSON(&GenericError{http.StatusInternalServerError, err.Error()}, rw)
 		return

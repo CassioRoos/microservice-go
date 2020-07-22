@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/CassioRoos/MicroseService/data"
 	"github.com/CassioRoos/MicroseService/handlers"
+	"github.com/hashicorp/go-hclog"
 	"google.golang.org/grpc"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -31,10 +32,16 @@ func main() {
 		panic(err)
 	}
 	cc := protos.NewCurrencyClient(conn)
-
-	log := log.New(os.Stdout, "cassio.roos-api++>", log.LstdFlags)
+	log := hclog.New(&hclog.LoggerOptions{
+		Name:            "cassio.roos-api++>",
+		Level:           hclog.LevelFromString("DEBUG"),
+		JSONFormat:      true,
+		TimeFormat:      "01/01/2006 15:04:05",
+	})
+	//log := log.New(os.Stdout, "cassio.roos-api++>", log.LstdFlags)
 	validator := data.NewValidation()
-	car := handlers.NewCars(log, validator, cc)
+	repo := data.NewCarsRepository(cc,log)
+	car := handlers.NewCars(log, validator, repo)
 	//Create a new serve mux and register the handler
 	sm := mux.NewRouter()
 
@@ -43,7 +50,9 @@ func main() {
 	// SubRouter is a Handler of handler for GETs
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
 	getRouter.HandleFunc("/cars", car.GetListCars)
+	getRouter.HandleFunc("/cars", car.GetListCars).Queries("currency", "{[A-Z]{3}}")
 	getRouter.HandleFunc("/cars/{id:[0-9]+}", car.GetCarById)
+	getRouter.HandleFunc("/cars/{id:[0-9]+}", car.GetCarById).Queries("currency", "{[A-Z]{3}}")
 
 	// SubRouter is a Handler of handler for PUTs
 	putRouter := sm.Methods(http.MethodPut).Subrouter()
@@ -72,7 +81,7 @@ func main() {
 	server := &http.Server{
 		Addr:         *bindAddress,
 		Handler:      ch(sm),
-		ErrorLog:     log,
+		ErrorLog:     log.StandardLogger(&hclog.StandardLoggerOptions{}),
 		WriteTimeout: 5 * time.Second,
 		ReadTimeout:  10 * time.Second,
 		IdleTimeout:  120 * time.Second,
@@ -80,9 +89,10 @@ func main() {
 
 	// log.Println("Listening to port: ", bindAddress)
 	go func() {
-		log.Printf("Starting server on port %s\n", *bindAddress)
+		log.Info("Starting server on port %s\n", *bindAddress)
 		if err := server.ListenAndServe(); err != nil {
-			log.Fatal(err)
+			log.Error(fmt.Sprintf("Error whole listening to port %s",*bindAddress))
+			os.Exit(1)
 		}
 	}()
 
@@ -93,7 +103,7 @@ func main() {
 
 	// WAIT until the signal comes. This is blocking, then will wait until something occurs
 	sig := <-sigChan
-	log.Println("Shutdown gracefully", sig)
+	log.Info("Shutdown gracefully", sig)
 
 	// get the general context to create a new
 	ct, _ := context.WithTimeout(context.Background(), 30*time.Second)

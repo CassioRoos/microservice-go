@@ -12,7 +12,7 @@ func (c Cars) MiddlewareValidateCar(next http.Handler) http.Handler {
 		car := &data.Car{}
 
 		if err := data.FromJSON(car, r.Body); err != nil {
-			c.l.Println("[ERROR] deserializing Car", err)
+			c.l.Error("[ERROR] deserializing Car", err)
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -20,7 +20,7 @@ func (c Cars) MiddlewareValidateCar(next http.Handler) http.Handler {
 		//Validate the car content before moving forward
 		errs := c.v.Validate(car)
 		if len(errs) != 0 {
-			c.l.Println("[ERROR] validating Car", errs)
+			c.l.Error("[ERROR] validating Car", errs)
 			http.Error(rw, fmt.Sprintf("Error reading the car: %s", errs), http.StatusBadRequest)
 			return
 		}

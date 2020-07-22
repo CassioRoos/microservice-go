@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"github.com/CassioRoos/MicroseService/data"
 	"net/http"
 )
@@ -15,10 +16,10 @@ import (
 
 // Create handles POST requests to add new cars
 func (c *Cars) PostCar(rw http.ResponseWriter, r *http.Request) {
-	c.l.Println("Handle POST ")
+	c.l.Debug("Handle POST ")
 	rw.WriteHeader(http.StatusCreated)
 	rw.Header().Add("Content-Type", "application/json")
 	car := r.Context().Value(KeyCar{}).(data.Car)
-	data.AddCar(&car)
-	c.l.Printf("Car %#v", car)
+	c.cr.AddCar(&car)
+	c.l.Debug(fmt.Sprintf("Car %#v", car))
 }

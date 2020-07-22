@@ -17,9 +17,9 @@ import (
 // Update handles PUT request to update car
 func (c *Cars) UpdateCar(rw http.ResponseWriter, r *http.Request) {
 
-	c.l.Println("Handle PUT Car")
+	c.l.Debug("Handle PUT Car")
 	car := r.Context().Value(KeyCar{}).(data.Car)
-	err := data.UpdateCar(car)
+	err := c.cr.UpdateCar(car)
 	if err == data.ErrCarNotFound {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
