@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/CassioRoos/grpc_currency/protos/currency"
 	"github.com/hashicorp/go-hclog"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"strings"
 )
 
@@ -62,11 +64,43 @@ type (
 	CarsRepository struct {
 		currency currency.CurrencyClient
 		log      hclog.Logger
+		// simple case
+		rates map[string]float64
+		// GRPC client
+		rateClient currency.Currency_SubscribeRatesClient
 	}
 )
 
 func NewCarsRepository(c currency.CurrencyClient, l hclog.Logger) CarsRepositoryInterface {
-	return &CarsRepository{c, l}
+	cr := &CarsRepository{c, l, make(map[string]float64), nil}
+	go cr.handleUpdates()
+	return cr
+}
+
+// Responsible to handle the updates and update cache
+func (c *CarsRepository) handleUpdates() {
+	sub, err := c.currency.SubscribeRates(context.Background())
+	if err != nil {
+		c.log.Error("Unable to subscribe for rates", "error", err)
+		return
+	}
+	c.rateClient = sub
+	// receive is blocking
+	for {
+		rrStream, err := sub.Recv()
+		if grpcError := rrStream.GetError(); grpcError != nil {
+			c.log.Error("Error subscribing for rates", "error", grpcError.Message)
+		}
+		if resp := rrStream.GetRateResponse(); resp != nil {
+			if err != nil {
+				c.log.Error("Error receiving message", "error", err)
+				return
+			}
+			c.log.Info("Update received", "destination", resp.Destination.String(), "rate", resp.Rate)
+			c.rates[resp.Destination.String()] = resp.Rate
+		}
+	}
+
 }
 
 // return all the cars in the DB
@@ -75,13 +109,13 @@ func (c *CarsRepository) GetCars(cur string) (Cars, error) {
 		return carList, nil
 	}
 
-	rate, err :=c.getRate(cur)
-	if err != nil{
+	rate, err := c.getRate(cur)
+	if err != nil {
 		c.log.Error("Unable to get rate", "Currency", cur, err)
 		return nil, err
 	}
 	cr := Cars{}
-	for _, car := range carList{
+	for _, car := range carList {
 		nc := *car
 		nc.Price *= rate
 		cr = append(cr, &nc)
@@ -99,8 +133,8 @@ func (c *CarsRepository) GetCarById(id int, cur string) (*Car, error) {
 	if strings.TrimSpace(cur) == "" {
 		return carList[i], nil
 	}
-	rate, err :=c.getRate(cur)
-	if err != nil{
+	rate, err := c.getRate(cur)
+	if err != nil {
 		c.log.Error("Unable to get rate", "Currency", cur, err)
 		return nil, err
 	}
@@ -150,14 +184,46 @@ func (c *CarsRepository) UpdateCar(car Car) error {
 	return nil
 }
 
-func (c *CarsRepository) getRate(destination string) (float64, error){
+func (c *CarsRepository) getRate(destination string) (float64, error) {
+	// if cached return
+	if _, ok := c.rates[destination]; ok {
+		return c.rates[destination], nil
+	}
 	rr := &currency.RateRequest{
-		Base: currency.Currencies(currency.Currencies_value["BRL"]),
+		Base:        currency.Currencies(currency.Currencies_value["BRL"]),
 		Destination: currency.Currencies(currency.Currencies_value[destination])}
+	// get initial rate
 	resp, err := c.currency.GetRate(context.Background(), rr)
+	if err != nil {
+		if s, ok := status.FromError(err); ok {
+			// I`m sure that will be the first item
+			md := s.Details()[0].(*currency.RateRequest)
+			if s.Code() == codes.InvalidArgument {
+				return -1, fmt.Errorf(
+					"Unable to get rate from currency server, base and destination currencies can not be the same base: %s, destination: %s",
+					md.Base.String(),
+					md.Destination.String())
+			}
+			return -1, fmt.Errorf(
+				"Unable to get rate from currency server, base: %s, destination: %s",
+				md.Base.String(),
+				md.Destination.String())
+		}
+
+	}
+	// subscribe for future updates
+	err = c.rateClient.Send(rr)
+	// set the value to cache
+	c.rates[destination] = resp.Rate
+	if err != nil {
+		c.log.Error("Unale to subscribe to rates update", "error", err, "destination", destination)
+	}
+	if err != nil {
+		c.log.Error("Unable to get the rate from currency", "currency", destination)
+		return 1, err
+	}
 	return resp.Rate, err
 }
-
 
 var carList = []*Car{
 	&Car{ID: 1,
