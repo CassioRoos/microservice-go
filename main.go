@@ -22,22 +22,25 @@ import (
 
 //A nice way to get the env variable, in this case, it will not raise an error when the value is not set, it will use default value instead
 var bindAddress = env.String("BIND_ADDRESS", false, ":8888", "Bind address for the server")
+var grpcPort = env.String("GRPC_PORT", false, ":9098", "Bind address for GRPC server")
 
 func main() {
 	env.Parse()
-	// THIS SHOULD NOT GO OUT IN PRODUCTION
-	// FOR TESTING PURPOSES  ONLY
-	conn, err := grpc.Dial("localhost:9098", grpc.WithInsecure())
-	if err != nil{
-		panic(err)
-	}
-	cc := protos.NewCurrencyClient(conn)
 	log := hclog.New(&hclog.LoggerOptions{
 		Name:            "cassio.roos-api++>",
 		Level:           hclog.LevelFromString("DEBUG"),
 		JSONFormat:      true,
 		TimeFormat:      "01/01/2006 15:04:05",
 	})
+	// THIS SHOULD NOT GO OUT IN PRODUCTION
+	// FOR TESTING PURPOSES  ONLY
+	conn, err := grpc.Dial(fmt.Sprintf("localhost%s",grpcPort), grpc.WithInsecure())
+	if err != nil{
+		log.Error("Unable to connect to GRPC Client on port")
+		panic(err)
+	}
+	cc := protos.NewCurrencyClient(conn)
+
 	//log := log.New(os.Stdout, "cassio.roos-api++>", log.LstdFlags)
 	validator := data.NewValidation()
 	repo := data.NewCarsRepository(cc,log)
