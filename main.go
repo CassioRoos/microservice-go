@@ -29,32 +29,35 @@ var grpcPort = env.String("GRPC_PORT", false, "localhost:9098", "Bind address fo
 func main() {
 	env.Parse()
 	log := hclog.New(&hclog.LoggerOptions{
-		Name:            "cassio.roos-api++>",
-		Level:           hclog.LevelFromString("DEBUG"),
-		JSONFormat:      true,
-		TimeFormat:      "01/01/2006 15:04:05",
+		Name:       "cassio.roos-api++>",
+		Level:      hclog.LevelFromString("DEBUG"),
+		JSONFormat: true,
+		TimeFormat: "01/01/2006 15:04:05",
 	})
 	// THIS SHOULD NOT GO OUT IN PRODUCTION
 	// FOR TESTING PURPOSES  ONLY
 	log.Info("Establishing a connection to GRPC", "GRPC", *grpcPort)
 	conn, err := grpc.Dial(*grpcPort, grpc.WithInsecure())
-	if err != nil{
+	if err != nil {
 		log.Error("Unable to connect to GRPC Client on port")
 		panic(err)
 	}
+	// I was having problems with GRPCurl in my containers
+	// that`s why i create this work around
 	hc := health.NewHealthCheckClient(conn)
+	// simple struct with hclog
 	healthCheck := grpc_healthcheck.NewGrpcHealthCheck(log, hc)
+	// check 10 times for a OK status from GRPC, if the connection could not be established it will log an error and
+	// will exit with code 1
 	healthCheck.HealthCheck(10)
 	cc := protos.NewCurrencyClient(conn)
 
 	//log := log.New(os.Stdout, "cassio.roos-api++>", log.LstdFlags)
 	validator := data.NewValidation()
-	repo := data.NewCarsRepository(cc,log)
+	repo := data.NewCarsRepository(cc, log)
 	car := handlers.NewCars(log, validator, repo)
 	//Create a new serve mux and register the handler
 	sm := mux.NewRouter()
-
-
 
 	// SubRouter is a Handler of handler for GETs
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
@@ -100,7 +103,7 @@ func main() {
 	go func() {
 		log.Info("Starting server on port %s\n", *bindAddress)
 		if err := server.ListenAndServe(); err != nil {
-			log.Error(fmt.Sprintf("Error while listening to port %s",*bindAddress))
+			log.Error(fmt.Sprintf("Error while listening to port %s", *bindAddress))
 			os.Exit(1)
 		}
 	}()
