@@ -32,7 +32,7 @@ definitions:
         x-go-name: Name
       price:
         description: the price for the car
-        format: float
+        format: double
         minimum: 0.01
         type: number
         x-go-name: Price
@@ -41,13 +41,21 @@ definitions:
     - price
     - license_plate
     type: object
-    x-go-package: MicroseService/data
+    x-go-package: github.com/CassioRoos/MicroseService/data
   Cars:
     description: Car defines the structure for an API car
     items:
       $ref: '#/definitions/Car'
     type: array
-    x-go-package: MicroseService/data
+    x-go-package: github.com/CassioRoos/MicroseService/data
+  CarsRepository:
+    description: Car defines the structure for an API car
+    type: object
+    x-go-package: github.com/CassioRoos/MicroseService/data
+  CarsRepositoryInterface:
+    description: Car defines the structure for an API car
+    type: object
+    x-go-package: github.com/CassioRoos/MicroseService/data
   GenericError:
     description: GenericError is a generic error message returned by a server
     properties:
@@ -59,7 +67,7 @@ definitions:
         type: string
         x-go-name: Message
     type: object
-    x-go-package: MicroseService/handlers
+    x-go-package: github.com/CassioRoos/MicroseService/handlers
   ValidationError:
     description: ValidationError is a collection of validation error messages
     properties:
@@ -69,7 +77,7 @@ definitions:
         type: array
         x-go-name: Messages
     type: object
-    x-go-package: MicroseService/handlers
+    x-go-package: github.com/CassioRoos/MicroseService/handlers
 info:
   description: Documentation for Cars API
   title: of cars
