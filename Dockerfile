@@ -19,6 +19,7 @@ WORKDIR /app
 
 COPY --from=builder build/MicroService .
 
-EXPOSE 7777
+EXPOSE 8888
+#EXPOSE ${APP_PORT:-'8888'}
 
 CMD ["/app/MicroService"]

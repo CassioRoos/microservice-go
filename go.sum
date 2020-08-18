@@ -2,6 +2,8 @@ cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/CassioRoos/grpc_currency v0.0.0-20200812005054-6c81130f7f50 h1:cno0q7enRjNwMufcsan8OELxTDMdfExf5En17NalVBI=
 github.com/CassioRoos/grpc_currency v0.0.0-20200812005054-6c81130f7f50/go.mod h1:8M9pFcvZHmrk67R1aeTIVCeLX1imZDw3L6qUF49WLYg=
+github.com/CassioRoos/grpc_currency v0.0.0-20200816014156-115e60de24fd h1:KCbE+HKszw27AqE+Tintu3wduDuuunUcdtQfkEKCxFc=
+github.com/CassioRoos/grpc_currency v0.0.0-20200816014156-115e60de24fd/go.mod h1:8M9pFcvZHmrk67R1aeTIVCeLX1imZDw3L6qUF49WLYg=
 github.com/PuerkitoBio/purell v1.1.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
 github.com/PuerkitoBio/purell v1.1.1 h1:WEQqlqaGbrPkxLJWfBwQmfEAE1Z7ONdDLqrN38tNFfI=
 github.com/PuerkitoBio/purell v1.1.1/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=

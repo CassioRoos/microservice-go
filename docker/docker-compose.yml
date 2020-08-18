@@ -1,0 +1,25 @@
+version: '3.0'
+services:
+  micro_service:
+    container_name: micro_service
+#    restart: unless-stopped
+    image: cassioroos/golang_microservice
+    build:
+      context: ./..
+    ports:
+      - ${APP_PORT:-8888}:8888
+    environment:
+      #- GRPC_PORT=${GRPC_PORT:-localhost:9098}
+      # for mac I need to specify different
+#      - GRPC_PORT=${GRPC_PORT:-docker.for.mac.localhost:9098}
+      - GRPC_PORT=grpc_client:9098
+    depends_on:
+      - grpc_client
+  grpc_client:
+    container_name: grpc_client
+#    restart: unless-stopped
+#    image: cassioroos/golang_grpc
+    build: https://github.com/CassioRoos/grpc_currency.git
+    ports:
+      - 9098:9098
+#      - GRPC_PORT=${GRPC_PORT:-host.docker.internal:9098}
